@@ -1,4 +1,3 @@
-import cv2
 import pathlib
 import shutil
 import os
@@ -10,14 +9,23 @@ image_extensions = ["jpg", "jpeg", "jpe", "jif", "jfif", "jfi", "png", "webp", "
 dir = filedialog.askdirectory()
 
 # Segregate according folder or file
-dirs = os.walk(dir)
+dirs = os.listdir(dir)
+print(dirs)
+
 if dirs != []:
-    os.makedirs(f"{dir}/Folders")
+    try: 
+        os.makedirs(f"{dir}/Folders")
+    except FileExistsError:
+        pass
     for d in dirs:
-        shutil.move(d, f"{dir}/Folders")
+        if os.path.isdir(f"{dir}/{d}"):
+            shutil.move(f"{dir}/{d}", f"{dir}/Folders")
     # Segregate files
     files = (file for file in os.listdir(dir) 
          if os.path.isfile(os.path.join(dir, file)))
-    os.makedirs(f"{dir}/Files")
+    try:
+        os.makedirs(f"{dir}/Files")
+    except FileExistsError:
+        pass
     for f in files:
         shutil.move(f"{dir}/{f}", f"{dir}/Files/{f}")
