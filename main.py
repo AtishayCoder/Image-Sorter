@@ -1,7 +1,7 @@
 import shutil
 import os
-import subject_identifier
-import extension_sorter
+import sorter.subject_identifier as subject_identifier
+import sorter.extension_sorter as extension_sorter
 from tkinter import filedialog
 
 image_extensions = [".jpg", ".jpeg", ".jpe", ".jif", ".jfif", ".jfi", ".png", ".webp", ".tiff", ".tif", ".raw", ".arw", ".cr2", ".nrw", ".k25", ".bmp", ".dib", ".heif", ".heic", ".svg", ".svgz"]
