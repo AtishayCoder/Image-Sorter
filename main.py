@@ -1,16 +1,23 @@
-import sorter.cv2_invoker as cv2_invoker
-import sorter.file_folder_seg as file_folder_seg
-import sorter.files_and_img_seg as files_and_images_seg
-from tkinter import filedialog
+import flet as ft
+import ui.ext_org as ext_org
+import ui.img_org as img_org
 
-# Get selected directory
-dir = filedialog.askdirectory()
+def main(page: ft.Page):
+    # Display layout according to platform
+    platform = page.platform
 
-# Segregate according folder or file
-file_folder_seg.segregate_files_and_folders(dir=dir)
+    if platform.name.lower() in ["android", "ios"]:
+        ext_org.organize_by_ext(page)
+    elif platform.name.lower() in ["windows", "macos", "linux"]:
+        img_org.organize_by_img(page)
+    else:
+        page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+        page.vertical_alignment = ft.MainAxisAlignment.CENTER
+        page.add(
+            ft.Text(
+                size=42.5,
+                value="Unsupported Platform"
+            )
+        )
 
-# Segregate pictures and other documents
-files_and_images_seg.segregate_images_and_docs(dir=dir)
-
-# Check for 'Files' and 'Images' folder and invoke function
-cv2_invoker.invoker(dir=dir)
+ft.app(target=main)
