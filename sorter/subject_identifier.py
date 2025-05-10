@@ -7,18 +7,41 @@ import numpy as np
 face_cascade = None
 output_folders = None
 
+def filter_overlapping_faces(faces, overlapThresh=0.3):
+    if len(faces) == 0:
+        return []
+
+    boxes = []
+    for (x, y, w, h) in faces:
+        boxes.append([x, y, x + w, y + h])
+
+    boxes = np.array(boxes)
+    pick = cv2.dnn.NMSBoxes(
+        boxes.tolist(),
+        [1.0] * len(boxes),
+        score_threshold=0.0,
+        nms_threshold=overlapThresh
+    )
+
+    if len(pick) == 0:
+        return []
+
+    pick = pick.flatten()
+    return [faces[i] for i in pick]
+
 def try_rotate_and_detect(img_path):
     detected_angle = None
 
-    # Step 1: Search for any face to fix rotation
     for angle in range(1, 360):
         pil_img = Image.open(img_path)
-        rotated_pil = pil_img.rotate(1, expand=True)
+        rotated_pil = pil_img.rotate(angle, expand=True, fillcolor=(0, 0, 0))
 
         rotated_cv = cv2.cvtColor(np.array(rotated_pil), cv2.COLOR_RGB2BGR)
         gray_rotated = cv2.cvtColor(rotated_cv, cv2.COLOR_BGR2GRAY)
 
         faces = face_cascade.detectMultiScale(gray_rotated, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        faces = [face for face in faces if face[2] > 50 and face[3] > 50]
+        faces = filter_overlapping_faces(faces)
 
         if len(faces) > 0:
             print(f"Detected face after rotating {angle} degrees.")
@@ -26,35 +49,37 @@ def try_rotate_and_detect(img_path):
             break
 
     if detected_angle is not None:
-        # Step 2: Rotate to nearest normal angle
         nearest_angle = min([0, 90, 180, 270], key=lambda x: abs(x - detected_angle))
-        print(f"Saving corrected rotation.")
+        print(f"Saving corrected rotation. Nearest angle chosen: {nearest_angle} degrees.")
 
         pil_img = Image.open(img_path)
         final_rotated = pil_img.rotate(nearest_angle, expand=True, fillcolor=(0, 0, 0))
-        final_rotated.save(img_path)  # Overwrite original image
+        final_rotated.save(img_path)
 
-        # Step 3: Re-load corrected image and re-run face detection properly
         img_cv = cv2.imread(img_path)
         if img_cv is None:
             print(f"Error reading corrected image {img_path}")
-            return 0  # No faces found because can't read
+            return 0
 
         gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        faces = [face for face in faces if face[2] > 50 and face[3] > 50]
+        faces = filter_overlapping_faces(faces)
 
         num_faces = len(faces)
         print(f"Detected {num_faces} face(s) after final correction.")
 
-        return num_faces  # Return correct number of faces after proper detection
+        return num_faces
 
-    return 0  # No faces detected after all rotation attempts
-
+    return 0
 
 def handle_image(filename, input_folder):
     img_path = os.path.join(input_folder, filename)
-    
+
+    print(f"Handling file: {img_path}")
+
     if not os.path.isfile(img_path):
+        print(f"Skipping {img_path}, not a file.")
         return
 
     try:
@@ -65,10 +90,13 @@ def handle_image(filename, input_folder):
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        faces = [face for face in faces if face[2] > 50 and face[3] > 50]
+        faces = filter_overlapping_faces(faces)
+
         num_faces = len(faces)
+        print(f"Initial detection found {num_faces} face(s)")
 
         if num_faces == 0:
-            # No face detected initially — try rotation and fix angle
             num_faces = try_rotate_and_detect(img_path)
 
         source_path = img_path
@@ -88,12 +116,11 @@ def handle_image(filename, input_folder):
     except Exception as e:
         print(f"Error processing {filename}: {e}")
 
-
-
 def segregate_images(input_folder):
     global face_cascade, output_folders
 
     print("Invoked OpenCV handler.")
+    print(f"Input folder: {input_folder}")
 
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
@@ -103,8 +130,10 @@ def segregate_images(input_folder):
         'Nature': os.path.join(input_folder, 'Nature')
     }
 
-    for folder in output_folders.values():
+    for name, folder in output_folders.items():
         os.makedirs(folder, exist_ok=True)
+        print(f"Ensured folder exists: {folder}")
 
     for filename in os.listdir(input_folder):
+        print("Processing " + filename)
         handle_image(filename=filename, input_folder=input_folder)
