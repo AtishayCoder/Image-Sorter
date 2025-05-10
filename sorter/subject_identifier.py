@@ -96,6 +96,15 @@ def handle_image(filename, input_folder):
         num_faces = len(faces)
         print(f"Initial detection found {num_faces} face(s)")
 
+        # New logic: If multiple faces but 1 large face (likely portrait), count as 1
+        if num_faces > 1:
+            areas = [w * h for (x, y, w, h) in faces]
+            max_area = max(areas)
+            large_faces = [area for area in areas if area > 0.5 * max_area]
+            if len(large_faces) == 1:
+                print("Multiple detections but one large face found - treating as single face.")
+                num_faces = 1
+
         if num_faces == 0:
             num_faces = try_rotate_and_detect(img_path)
 
