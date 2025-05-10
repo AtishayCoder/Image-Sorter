@@ -11,6 +11,8 @@ def sort_by_extension(base_folder_path):
         ext = f.split(".")[1]
         if ext.upper() not in extensions:
             extensions.append(ext.upper())
+
+    print(f"Extensions found: {extensions}")
     
     # Create folders
     for e in extensions:
